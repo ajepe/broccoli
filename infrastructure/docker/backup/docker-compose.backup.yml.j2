@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backup:
+    image: postgres:15
+    container_name: backup_${CLIENT_NAME}
+    restart: "no"
+    environment:
+      - CLIENT_NAME=${CLIENT_NAME}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_PREFIX=${S3_PREFIX}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - RETENTION_DAILY=${RETENTION_DAILY:-7}
+      - RETENTION_WEEKLY=${RETENTION_WEEKLY:-4}
+      - RETENTION_MONTHLY=${RETENTION_MONTHLY:-3}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - backup_data:/backups
+    network_mode: "service:db"
+    entrypoint: ["/bin/bash", "/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "com.odoo-cloud.backup=true"
+      - "com.odoo-cloud.client=${CLIENT_NAME}"
+
+  backup-cron:
+    image: alpine:3.18
+    container_name: backup-cron_${CLIENT_NAME}
+    restart: "no"
+    environment:
+      - CLIENT_NAME=${CLIENT_NAME}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: >
+      sh -c "echo \"$${BACKUP_SCHEDULE} /bin/sh -c 'docker start backup_$${CLIENT_NAME}'\" > /etc/crontabs/root 
+      && crond -f -l 2"
+    labels:
+      - "com.odoo-cloud.backup-cron=true"
+      - "com.odoo-cloud.client=${CLIENT_NAME}"
+
+volumes:
+  backup_data:
+    name: backup_${CLIENT_NAME}_data
