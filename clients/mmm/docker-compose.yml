@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  odoo:
+    image: odoo:17.0
+    container_name: odoo_${CLIENT_NAME}
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "${ODOO_PORT}:8069"
+    environment:
+      - HOST=db
+      - PORT=5432
+      - USER=${DB_USER}
+      - PASSWORD=${DB_PASSWORD}
+      - DATABASE=${DB_NAME}
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_addons:/mnt/extra-addons
+    networks:
+      - ${CLIENT_NAME}_network
+    mem_limit: ${MEMORY_LIMIT}
+    cpus: ${CPU_LIMIT}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8069"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.odoo-cloud.client=${CLIENT_NAME}"
+      - "com.odoo-cloud.plan=${PLAN}"
+      - "traefik.enable=true"
+      - "traefik.http.routers.${CLIENT_NAME}.rule=Host(`${CLIENT_DOMAIN}`)"
+      - "traefik.http.routers.${CLIENT_NAME}.tls=true"
+      - "traefik.http.services.${CLIENT_NAME}.loadbalancer.server.port=8069"
+      - "traefik.docker.network=${CLIENT_NAME}_network"
+
+  db:
+    image: postgres:15
+    container_name: db_${CLIENT_NAME}
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - ${CLIENT_NAME}_network
+    mem_limit: ${DB_MEMORY_LIMIT}
+    cpus: ${DB_CPU_LIMIT}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.odoo-cloud.client=${CLIENT_NAME}"
+      - "com.odoo-cloud.type=database"
+
+  
+
+networks:
+  ${CLIENT_NAME}_network:
+    driver: bridge
+    name: ${CLIENT_NAME}_network
+
+volumes:
+  odoo_data:
+    name: odoo_${CLIENT_NAME}_data
+  pg_data:
+    name: pg_${CLIENT_NAME}_data
+  

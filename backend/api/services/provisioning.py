@@ -2,6 +2,7 @@ import os
 import secrets
 import string
 import subprocess
+import json
 from typing import Optional
 from datetime import datetime
 from jinja2 import Template
@@ -158,10 +159,14 @@ BACKUP_SCHEDULE=0 2 * * *
 def create_nginx_config(client: Client) -> None:
     template_path = "/home/babatope/Documents/projects/saas/infrastructure/nginx/sites-available/client.conf.j2"
     
+    custom_domains = json.loads(client.custom_domains or "[]")
+    all_domains = [client.domain] + custom_domains
+    
     context = {
         "client_name": client.name,
         "client_domain": client.domain,
         "odoo_port": client.odoo_port,
+        "all_domains": all_domains,
     }
     
     nginx_content = render_template(template_path, context)

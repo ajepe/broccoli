@@ -105,8 +105,63 @@
             </el-form-item>
           </el-form>
         </el-card>
+        
+        <el-card style="margin-top: 20px;">
+          <template #header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Custom Domains</span>
+              <el-button type="primary" size="small" @click="showAddDomainDialog = true">
+                Add Domain
+              </el-button>
+            </div>
+          </template>
+          <div v-if="!client?.custom_domains?.length" style="color: #909399; text-align: center; padding: 20px;">
+            No custom domains added yet
+          </div>
+          <el-table v-else :data="client.custom_domains">
+            <el-table-column prop="domain" label="Domain">
+              <template #default="{ row }">
+                <el-link type="primary" :href="`https://${row}`" target="_blank">
+                  {{ row }}
+                </el-link>
+              </template>
+            </el-table-column>
+            <el-table-column label="Action" width="100">
+              <template #default="{ row }">
+                <el-button type="danger" size="small" text @click="removeDomain(row)">
+                  Remove
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
       </el-col>
     </el-row>
+    
+    <el-dialog v-model="showAddDomainDialog" title="Add Custom Domain" width="400px">
+      <el-form @submit.prevent="addDomain">
+        <el-form-item label="Domain">
+          <el-input v-model="newDomain" placeholder="e.g. erp.yourcompany.com" />
+        </el-form-item>
+        <el-alert 
+          type="info" 
+          :closable="false"
+          style="margin-bottom: 15px;"
+        >
+          <template #title>
+            <div style="font-size: 12px;">
+              <p>Add these DNS records to point your domain:</p>
+              <p><strong>CNAME:</strong> {{ newDomain || 'your-domain.com' }} → {{ client?.domain }}</p>
+              <p><strong>or A Record:</strong> {{ newDomain || 'your-domain.com' }} → [Your Server IP]</p>
+            </div>
+          </template>
+        </el-alert>
+      </el-form>
+      <template #footer>
+        <el-button @click="showAddDomainDialog = false">Cancel</el-button>
+        <el-button type="primary" @click="addDomain" :loading="addingDomain">Add Domain</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -124,6 +179,9 @@ const containerStats = ref([])
 const loading = ref(true)
 const statsLoading = ref(true)
 const showPassword = ref(false)
+const showAddDomainDialog = ref(false)
+const newDomain = ref('')
+const addingDomain = ref(false)
 
 const fetchClient = async () => {
   loading.value = true
@@ -198,6 +256,43 @@ const formatDate = (date) => new Date(date).toLocaleString()
 const getStatusType = (status) => {
   const types = { active: 'success', suspended: 'warning', pending: 'info' }
   return types[status] || ''
+}
+
+const addDomain = async () => {
+  if (!newDomain.value.trim()) {
+    ElMessage.warning('Please enter a domain')
+    return
+  }
+  
+  const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z]{2,})+$/
+  if (!domainRegex.test(newDomain.value.trim())) {
+    ElMessage.warning('Invalid domain format')
+    return
+  }
+  
+  addingDomain.value = true
+  try {
+    await api.post(`/clients/${clientName}/domains?domain=${encodeURIComponent(newDomain.value.trim())}`)
+    ElMessage.success('Domain added. SSL certificate will be provisioned automatically.')
+    showAddDomainDialog.value = false
+    newDomain.value = ''
+    fetchClient()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || 'Failed to add domain')
+  } finally {
+    addingDomain.value = false
+  }
+}
+
+const removeDomain = async (domain) => {
+  try {
+    await ElMessageBox.confirm(`Remove domain "${domain}"?`, 'Confirm')
+    await api.delete(`/clients/${clientName}/domains/${domain}`)
+    ElMessage.success('Domain removed')
+    fetchClient()
+  } catch (error) {
+    if (error !== 'cancel') ElMessage.error('Failed to remove domain')
+  }
 }
 
 onMounted(() => {

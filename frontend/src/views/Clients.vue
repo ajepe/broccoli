@@ -1,56 +1,70 @@
 <template>
   <div class="clients-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>All Clients</span>
-          <el-button type="primary" @click="$router.push('/clients/new')">
-            <el-icon><Plus /></el-icon>
-            Create Client
-          </el-button>
-        </div>
-      </template>
-      
+    <div class="page-header">
+      <div>
+        <h1>Clients</h1>
+        <p>Manage your Odoo cloud instances</p>
+      </div>
+      <el-button type="primary" @click="$router.push('/clients/new')">
+        <el-icon><Plus /></el-icon>
+        Add Client
+      </el-button>
+    </div>
+
+    <el-card class="clients-card">
       <el-table :data="clients" v-loading="loading" style="width: 100%">
-        <el-table-column prop="name" label="Client Name" width="150">
+        <el-table-column prop="name" label="Client" min-width="180">
           <template #default="{ row }">
-            <router-link :to="`/clients/${row.name}`" class="client-link">
-              {{ row.name }}
-            </router-link>
+            <div class="client-info">
+              <div class="client-avatar">{{ row.name.charAt(0).toUpperCase() }}</div>
+              <div>
+                <div class="client-name">{{ row.name }}</div>
+                <div class="client-domain">{{ row.domain }}</div>
+              </div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="domain" label="Domain" />
-        <el-table-column prop="email" label="Email" />
+        <el-table-column prop="email" label="Email" min-width="180" />
         <el-table-column prop="plan" label="Plan" width="120">
           <template #default="{ row }">
-            <el-tag :type="getPlanType(row.plan)">{{ row.plan }}</el-tag>
+            <el-tag :type="getPlanType(row.plan)" size="small">{{ row.plan }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="Status" width="120">
+        <el-table-column prop="status" label="Status" width="130">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
+            <div class="status-badge" :class="row.status">
+              <span class="status-dot"></span>
+              {{ row.status }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="odoo_port" label="Port" width="80" />
-        <el-table-column label="Actions" width="200">
+        <el-table-column label="Actions" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="viewClient(row)">View</el-button>
-            <el-button 
-              v-if="row.status === 'active'" 
-              size="small" 
-              type="warning"
-              @click="suspendClient(row)"
-            >
-              Suspend
-            </el-button>
-            <el-button 
-              v-if="row.status === 'suspended'" 
-              size="small" 
-              type="success"
-              @click="resumeClient(row)"
-            >
-              Resume
-            </el-button>
+            <div class="action-buttons">
+              <el-button size="small" @click="viewClient(row)">
+                <el-icon><View /></el-icon>
+              </el-button>
+              <el-button 
+                v-if="row.status === 'active'" 
+                size="small" 
+                type="warning"
+                @click="suspendClient(row)"
+              >
+                <el-icon><Lock /></el-icon>
+              </el-button>
+              <el-button 
+                v-if="row.status === 'suspended'" 
+                size="small" 
+                type="success"
+                @click="resumeClient(row)"
+              >
+                <el-icon><Unlock /></el-icon>
+              </el-button>
+              <el-button size="small" type="danger" @click="deleteClient(row)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -91,7 +105,6 @@ const suspendClient = async (client) => {
       'Confirm Suspend',
       { type: 'warning' }
     )
-    
     await api.post(`/clients/${client.name}/suspend`)
     ElMessage.success('Client suspended')
     fetchClients()
@@ -112,14 +125,26 @@ const resumeClient = async (client) => {
   }
 }
 
-const getPlanType = (plan) => {
-  const types = { basic: '', business: 'success', enterprise: 'warning' }
-  return types[plan] || ''
+const deleteClient = async (client) => {
+  try {
+    await ElMessageBox.confirm(
+      `Are you sure you want to delete ${client.name}? This action cannot be undone.`,
+      'Confirm Delete',
+      { type: 'error', confirmButtonText: 'Delete', cancelButtonText: 'Cancel' }
+    )
+    await api.delete(`/clients/${client.name}`)
+    ElMessage.success('Client deleted')
+    fetchClients()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('Failed to delete client')
+    }
+  }
 }
 
-const getStatusType = (status) => {
-  const types = { active: 'success', suspended: 'warning', pending: 'info' }
-  return types[status] || ''
+const getPlanType = (plan) => {
+  const types = { basic: 'info', business: 'success', enterprise: 'warning' }
+  return types[plan] || 'info'
 }
 
 onMounted(() => {
@@ -129,21 +154,93 @@ onMounted(() => {
 
 <style scoped>
 .clients-page {
-  padding: 20px;
+  animation: fadeIn 0.3s ease;
 }
 
-.card-header {
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 32px;
 }
 
-.client-link {
-  color: #409eff;
-  text-decoration: none;
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
 }
 
-.client-link:hover {
-  text-decoration: underline;
+.page-header p {
+  color: #6B7280;
+}
+
+.clients-card {
+  border-radius: 12px;
+}
+
+.client-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.client-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366F1 0%, #818CF8 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.client-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.client-domain {
+  font-size: 0.8rem;
+  color: #9CA3AF;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-badge.active .status-dot {
+  background: #10B981;
+}
+
+.status-badge.suspended .status-dot {
+  background: #F59E0B;
+}
+
+.status-badge.pending .status-dot {
+  background: #6B7280;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
 }
 </style>

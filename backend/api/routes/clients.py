@@ -18,6 +18,7 @@ from backend.api.services.provisioning import (
 )
 from backend.api.services.backup_service import trigger_backup
 from backend.core.config import get_settings
+import json
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -417,6 +418,125 @@ def create_backup(
     log_activity(db, current_user.id, client.id, "backup", f"Started {backup_type} backup")
     
     return result
+
+
+@router.get("/clients/{client_name}/domains")
+def list_custom_domains(
+    client_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.name == client_name).first()
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found"
+        )
+    
+    domains = json.loads(client.custom_domains or "[]")
+    return {"domains": domains, "primary_domain": client.domain}
+
+
+@router.post("/clients/{client_name}/domains")
+def add_custom_domain(
+    client_name: str,
+    domain: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    import re
+    domain_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z]{2,})+$'
+    
+    if not re.match(domain_pattern, domain):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid domain format"
+        )
+    
+    client = db.query(Client).filter(Client.name == client_name).first()
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found"
+        )
+    
+    domains = json.loads(client.custom_domains or "[]")
+    
+    if domain in domains:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Domain already added"
+        )
+    
+    existing_client = db.query(Client).filter(Client.domain == domain).first()
+    if existing_client and existing_client.id != client.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Domain is already in use"
+        )
+    
+    domains.append(domain)
+    client.custom_domains = json.dumps(domains)
+    db.commit()
+    
+    try:
+        create_nginx_config(client)
+        reload_nginx()
+        request_ssl_certificate(domain, settings.SMTP_FROM)
+        reload_nginx()
+    except Exception as e:
+        pass
+    
+    log_activity(db, current_user.id, client.id, "domain_add", f"Added custom domain: {domain}")
+    
+    return {"success": True, "domain": domain, "message": "Domain added. SSL certificate will be provisioned automatically."}
+
+
+@router.delete("/clients/{client_name}/domains/{domain}")
+def remove_custom_domain(
+    client_name: str,
+    domain: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(Client.name == client_name).first()
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found"
+        )
+    
+    domains = json.loads(client.custom_domains or "[]")
+    
+    if domain not in domains:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Domain not found"
+        )
+    
+    domains.remove(domain)
+    client.custom_domains = json.dumps(domains)
+    db.commit()
+    
+    remove_nginx_domain_config(client, domain)
+    reload_nginx()
+    
+    log_activity(db, current_user.id, client.id, "domain_remove", f"Removed custom domain: {domain}")
+    
+    return {"success": True, "message": f"Domain {domain} removed"}
+
+
+def remove_nginx_domain_config(client: Client, domain: str):
+    import os
+    nginx_config = f"/etc/nginx/sites-available/{client.name}_{domain.replace('.', '_')}.conf"
+    nginx_enabled = f"/etc/nginx/sites-enabled/{client.name}_{domain.replace('.', '_')}.conf"
+    
+    for path in [nginx_config, nginx_enabled]:
+        if os.path.exists(path):
+            os.remove(path)
 
 
 from datetime import datetime

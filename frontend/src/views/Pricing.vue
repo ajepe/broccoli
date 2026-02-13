@@ -1,16 +1,18 @@
 <template>
   <div class="pricing-page">
     <div class="pricing-header">
-      <h1>Simple, Transparent Pricing</h1>
-      <p>Choose the perfect plan for your business</p>
-    </div>
-
-    <div class="pricing-toggle">
-      <span :class="{ active: billing === 'monthly' }" @click="billing = 'monthly'">Monthly</span>
-      <el-switch v-model="annual" />
-      <span :class="{ active: billing === 'annual' }" @click="billing = 'annual'">
-        Annual <small>(Save 20%)</small>
-      </span>
+      <div class="badge">Pricing</div>
+      <h1>Simple, transparent pricing</h1>
+      <p>Choose the perfect plan for your business needs. All plans include a 14-day free trial.</p>
+      
+      <div class="billing-toggle">
+        <span :class="{ active: billing === 'monthly' }" @click="billing = 'monthly'">Monthly</span>
+        <el-switch v-model="annual" />
+        <span :class="{ active: billing === 'annual' }" @click="billing = 'annual'">
+          Annual
+          <span class="save-badge">Save 20%</span>
+        </span>
+      </div>
     </div>
 
     <div class="pricing-cards">
@@ -20,26 +22,31 @@
         class="pricing-card"
         :class="{ featured: plan.featured }"
       >
-        <div v-if="plan.featured" class="featured-badge">Most Popular</div>
-        <h2>{{ plan.name }}</h2>
-        <div class="price">
+        <div v-if="plan.featured" class="popular-badge">Most Popular</div>
+        
+        <div class="plan-header">
+          <h2>{{ plan.name }}</h2>
+          <p>{{ plan.description }}</p>
+        </div>
+        
+        <div class="plan-price">
           <span class="currency">₦</span>
           <span class="amount">{{ annual ? plan.annualPrice : plan.price }}</span>
           <span class="period">/month</span>
         </div>
-        <p class="description">{{ plan.description }}</p>
         
         <el-button 
           :type="plan.featured ? 'primary' : 'default'" 
           size="large" 
+          class="plan-btn"
           @click="selectPlan(plan)"
         >
           Get Started
         </el-button>
-
+        
         <ul class="features">
           <li v-for="feature in plan.features" :key="feature">
-            <el-icon color="#67c23a"><Check /></el-icon>
+            <el-icon class="check-icon"><Check /></el-icon>
             {{ feature }}
           </li>
         </ul>
@@ -50,30 +57,29 @@
       <h2>Frequently Asked Questions</h2>
       <div class="faq-grid">
         <div class="faq-item">
-          <h3>Can I upgrade my plan later?</h3>
-          <p>Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+          <h3>Can I change plans later?</h3>
+          <p>Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately with prorated billing.</p>
         </div>
         <div class="faq-item">
-          <h3>Is my data backed up?</h3>
-          <p>Yes, all plans include automated daily backups. Business and Enterprise plans include hourly backups.</p>
+          <h3>What's included in the free trial?</h3>
+          <p>Full access to all features for 14 days. No credit card required to start your trial.</p>
         </div>
         <div class="faq-item">
-          <h3>Do you offer free trials?</h3>
-          <p>Yes, we offer a 14-day free trial on all plans. No credit card required.</p>
+          <h3>How do backups work?</h3>
+          <p>Automatic daily backups for Starter plans, hourly for Business and Enterprise. All backups are encrypted and stored securely.</p>
         </div>
         <div class="faq-item">
-          <h3>What payment methods do you accept?</h3>
-          <p>We accept all major credit cards, PayPal, and bank transfers for annual plans.</p>
+          <h3>Do you offer support?</h3>
+          <p>All plans include email support. Business and Enterprise plans get priority support with faster response times.</p>
         </div>
       </div>
     </div>
 
     <div class="cta-section">
-      <h2>Need a custom solution?</h2>
-      <p>Contact us for custom Enterprise deployments</p>
-      <div class="cta-buttons">
+      <div class="cta-content">
+        <h2>Need a custom solution?</h2>
+        <p>Contact us for custom Enterprise deployments with dedicated infrastructure</p>
         <el-button type="primary" size="large">Contact Sales</el-button>
-        <el-button size="large" @click="$router.push('/faq')">View FAQ</el-button>
       </div>
     </div>
   </div>
@@ -85,15 +91,14 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const annual = ref(true)
-const billing = ref('annual')
 
 const plans = [
   {
     id: 'basic',
     name: 'Starter',
-    price: 15000,
-    annualPrice: 12000,
-    description: 'Perfect for small businesses just getting started',
+    price: '15,000',
+    annualPrice: '12,000',
+    description: 'Perfect for small businesses getting started',
     featured: false,
     features: [
       '2 GB RAM',
@@ -109,9 +114,9 @@ const plans = [
   {
     id: 'business',
     name: 'Business',
-    price: 45000,
-    annualPrice: 36000,
-    description: 'Ideal for growing businesses with higher demands',
+    price: '45,000',
+    annualPrice: '36,000',
+    description: 'Ideal for growing businesses',
     featured: true,
     features: [
       '4 GB RAM',
@@ -129,8 +134,8 @@ const plans = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 120000,
-    annualPrice: 96000,
+    price: '120,000',
+    annualPrice: '96,000',
     description: 'Maximum performance for large organizations',
     featured: false,
     features: [
@@ -162,192 +167,250 @@ const selectPlan = (plan) => {
 <style scoped>
 .pricing-page {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 40px 20px;
+  background: #F9FAFB;
+  padding: 60px 20px;
 }
 
 .pricing-header {
   text-align: center;
-  margin-bottom: 40px;
+  max-width: 600px;
+  margin: 0 auto 60px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366F1;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 20px;
 }
 
 .pricing-header h1 {
   font-size: 2.5rem;
-  color: #303133;
-  margin: 0;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 16px;
 }
 
-.pricing-header p {
-  font-size: 1.2rem;
-  color: #909399;
-  margin: 10px 0 0;
+.pricing-header > p {
+  font-size: 1.125rem;
+  color: #6B7280;
+  line-height: 1.7;
+  margin-bottom: 32px;
 }
 
-.pricing-toggle {
-  display: flex;
+.billing-toggle {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 40px;
+  gap: 16px;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.pricing-toggle span {
+.billing-toggle span {
+  font-weight: 500;
+  color: #6B7280;
   cursor: pointer;
-  color: #909399;
-  transition: color 0.3s;
+  transition: color 0.2s;
 }
 
-.pricing-toggle span.active {
-  color: #303133;
-  font-weight: bold;
+.billing-toggle span.active {
+  color: #111827;
 }
 
-.pricing-toggle small {
-  color: #67c23a;
-  font-size: 0.8rem;
+.save-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #10B981;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-left: 8px;
 }
 
 .pricing-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 30px;
-  max-width: 1200px;
-  margin: 0 auto;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto 80px;
 }
 
 .pricing-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 40px 30px;
-  text-align: center;
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
   position: relative;
-  transition: transform 0.3s, box-shadow 0.3s;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
 }
 
 .pricing-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 .pricing-card.featured {
-  border: 2px solid #00d9ff;
-  transform: scale(1.05);
+  border-color: #6366F1;
+  transform: scale(1.02);
 }
 
 .pricing-card.featured:hover {
-  transform: scale(1.05) translateY(-5px);
+  transform: scale(1.02) translateY(-4px);
 }
 
-.featured-badge {
+.popular-badge {
   position: absolute;
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: #00d9ff;
-  color: #fff;
-  padding: 5px 15px;
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  color: white;
+  padding: 6px 20px;
   border-radius: 20px;
   font-size: 0.8rem;
-  font-weight: bold;
+  font-weight: 600;
 }
 
-.pricing-card h2 {
-  color: #303133;
-  margin: 0;
+.plan-header {
+  margin-bottom: 24px;
 }
 
-.price {
-  margin: 20px 0;
+.plan-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.plan-header p {
+  color: #6B7280;
+  font-size: 0.9rem;
+}
+
+.plan-price {
+  margin-bottom: 24px;
 }
 
 .currency {
   font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
   vertical-align: top;
 }
 
 .amount {
-  font-size: 3.5rem;
-  font-weight: bold;
-  color: #303133;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #111827;
 }
 
 .period {
-  color: #909399;
+  color: #6B7280;
+  font-size: 1rem;
 }
 
-.description {
-  color: #909399;
-  margin-bottom: 20px;
+.plan-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-bottom: 32px;
 }
 
 .features {
   list-style: none;
   padding: 0;
-  margin-top: 30px;
-  text-align: left;
+  margin: 0;
 }
 
 .features li {
-  padding: 8px 0;
-  color: #606266;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 10px 0;
+  color: #4B5563;
+  font-size: 0.9rem;
+}
+
+.check-icon {
+  color: #10B981;
+  font-weight: bold;
 }
 
 .faq-section {
-  max-width: 1000px;
-  margin: 80px auto;
+  max-width: 900px;
+  margin: 0 auto 60px;
 }
 
 .faq-section h2 {
   text-align: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
   margin-bottom: 40px;
 }
 
 .faq-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
+  gap: 24px;
 }
 
 .faq-item {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .faq-item h3 {
-  margin: 0 0 10px;
-  color: #303133;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
 }
 
 .faq-item p {
-  margin: 0;
-  color: #909399;
+  color: #6B7280;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .cta-section {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.cta-content {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  border-radius: 20px;
+  padding: 48px;
   text-align: center;
-  padding: 60px 20px;
-  background: #fff;
-  border-radius: 12px;
-  max-width: 600px;
-  margin: 40px auto;
+  color: white;
 }
 
-.cta-section h2 {
-  margin: 0;
+.cta-content h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 12px;
 }
 
-.cta-section p {
-  color: #909399;
-  margin: 10px 0 20px;
+.cta-content p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 24px;
 }
 
 @media (max-width: 900px) {
   .pricing-cards {
     grid-template-columns: 1fr;
+    max-width: 400px;
   }
   
   .pricing-card.featured {
@@ -355,7 +418,7 @@ const selectPlan = (plan) => {
   }
   
   .pricing-card.featured:hover {
-    transform: translateY(-5px);
+    transform: translateY(-4px);
   }
   
   .faq-grid {

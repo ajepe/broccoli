@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -40,9 +40,23 @@ class ClientResponse(ClientBase):
     last_backup: Optional[datetime] = None
     created_at: datetime
     activated_at: Optional[datetime] = None
+    custom_domains: Optional[List[str]] = []
     
     class Config:
         from_attributes = True
+    
+    @classmethod
+    def from_orm(cls, obj):
+        data = {k: getattr(obj, k, None) for k in obj.__table__.columns.keys()}
+        if data.get('custom_domains'):
+            import json
+            try:
+                data['custom_domains'] = json.loads(data['custom_domains'])
+            except:
+                data['custom_domains'] = []
+        else:
+            data['custom_domains'] = []
+        return cls(**data)
 
 
 class ClientDetailResponse(ClientResponse):
@@ -138,3 +152,10 @@ class ContainerStats(BaseModel):
     network_rx_mb: float
     network_tx_mb: float
     uptime: str
+
+
+class CustomDomainResponse(BaseModel):
+    domain: str
+    status: str
+    ssl_enabled: bool
+    added_at: datetime

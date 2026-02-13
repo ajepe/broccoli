@@ -54,6 +54,7 @@ class Client(Base):
     suspended_at = Column(DateTime, nullable=True)
     
     notes = Column(Text, nullable=True)
+    custom_domains = Column(Text, default="[]")
 
 
 class User(Base):

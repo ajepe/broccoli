@@ -1,84 +1,95 @@
 <template>
-  <div class="signup-container">
-    <el-card class="signup-card">
-      <template #header>
-        <div class="signup-header">
-          <h1>Get Started</h1>
-          <p>Deploy your Odoo instance in minutes</p>
-        </div>
-      </template>
-      
-      <el-steps :active="currentStep" finish-status="success" align-center>
-        <el-step title="Account" />
-        <el-step title="Plan" />
-        <el-step title="Configure" />
-      </el-steps>
-
-      <el-form ref="formRef" :model="form" :rules="rules" v-loading="loading">
-        <!-- Step 1: Account -->
-        <div v-show="currentStep === 0">
-          <el-form-item prop="email">
-            <el-input v-model="form.email" placeholder="Email Address" prefix-icon="Message" size="large" />
-          </el-form-item>
-          <el-form-item prop="username">
-            <el-input v-model="form.username" placeholder="Username" prefix-icon="User" size="large" />
-          </el-form-item>
-          <el-form-item prop="password">
-            <el-input v-model="form.password" type="password" placeholder="Password" prefix-icon="Lock" size="large" show-password />
-          </el-form-item>
-          <el-form-item prop="full_name">
-            <el-input v-model="form.full_name" placeholder="Full Name (Optional)" prefix-icon="UserFilled" size="large" />
-          </el-form-item>
+  <div class="auth-page">
+    <div class="auth-background">
+      <div class="bg-gradient"></div>
+      <div class="bg-pattern"></div>
+    </div>
+    
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="logo">
+            <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#6366F1"/>
+              <path d="M8 16C8 11.5817 11.5817 8 16 8V8C20.4183 8 24 11.5817 24 16V16C24 20.4183 20.4183 24 16 24V24" stroke="white" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="4" fill="white"/>
+            </svg>
+          </div>
+          <h1>Create an account</h1>
+          <p>Get started with Odoo Cloud Africa</p>
         </div>
 
-        <!-- Step 2: Plan -->
-        <div v-show="currentStep === 1">
-          <div class="plan-cards">
-            <div 
-              v-for="plan in plans" 
-              :key="plan.id"
-              class="plan-card"
-              :class="{ selected: form.plan === plan.id }"
-              @click="form.plan = plan.id"
-            >
-              <div class="plan-header">
-                <h3>{{ plan.name }}</h3>
-                <span class="price">{{ plan.price }}<small>/mo</small></span>
+        <el-steps :active="currentStep" finish-status="success" class="steps">
+          <el-step title="Account" />
+          <el-step title="Plan" />
+          <el-step title="Configure" />
+        </el-steps>
+
+        <el-form ref="formRef" :model="form" :rules="rules" v-loading="loading">
+          <!-- Step 1: Account -->
+          <div v-show="currentStep === 0" class="step-content">
+            <el-form-item prop="email">
+              <el-input v-model="form.email" placeholder="Email Address" size="large" />
+            </el-form-item>
+            <el-form-item prop="username">
+              <el-input v-model="form.username" placeholder="Username" size="large" />
+            </el-form-item>
+            <el-form-item prop="password">
+              <el-input v-model="form.password" type="password" placeholder="Password" size="large" show-password />
+            </el-form-item>
+          </div>
+
+          <!-- Step 2: Plan -->
+          <div v-show="currentStep === 1" class="step-content">
+            <div class="plan-options">
+              <div 
+                v-for="plan in plans" 
+                :key="plan.id"
+                class="plan-option"
+                :class="{ selected: form.plan === plan.id }"
+                @click="form.plan = plan.id"
+              >
+                <div class="plan-icon">
+                  <el-icon v-if="plan.id === 'basic'"><Monitor /></el-icon>
+                  <el-icon v-else-if="plan.id === 'business'"><Briefcase /></el-icon>
+                  <el-icon v-else><OfficeBuilding /></el-icon>
+                </div>
+                <div class="plan-info">
+                  <span class="plan-name">{{ plan.name }}</span>
+                  <span class="plan-price">₦{{ plan.price }}/mo</span>
+                </div>
               </div>
-              <ul>
-                <li v-for="feature in plan.features" :key="feature">✓ {{ feature }}</li>
-              </ul>
             </div>
           </div>
-        </div>
 
-        <!-- Step 3: Configure -->
-        <div v-show="currentStep === 2">
-          <el-form-item prop="company_name">
-            <el-input v-model="form.company_name" placeholder="Company Name" size="large" />
-          </el-form-item>
-          <el-form-item prop="subdomain">
-            <el-input v-model="form.subdomain" placeholder="Subdomain" size="large">
-              <template #append>.yourdomain.com</template>
-            </el-input>
-          </el-form-item>
-        </div>
+          <!-- Step 3: Configure -->
+          <div v-show="currentStep === 2" class="step-content">
+            <el-form-item prop="company_name">
+              <el-input v-model="form.company_name" placeholder="Company Name" size="large" />
+            </el-form-item>
+            <el-form-item prop="subdomain">
+              <el-input v-model="form.subdomain" placeholder="Subdomain" size="large">
+                <template #append>.yourdomain.com</template>
+              </el-input>
+            </el-form-item>
+          </div>
 
-        <div class="form-actions">
-          <el-button v-if="currentStep > 0" @click="currentStep--">Back</el-button>
-          <el-button v-if="currentStep < 2" type="primary" @click="nextStep" size="large">
-            Continue
-          </el-button>
-          <el-button v-if="currentStep === 2" type="primary" @click="submitForm" :loading="loading" size="large">
-            Create Account & Deploy
-          </el-button>
-        </div>
-      </el-form>
+          <div class="form-actions">
+            <el-button v-if="currentStep > 0" @click="currentStep--">Back</el-button>
+            <el-button v-if="currentStep < 2" type="primary" @click="nextStep" size="large">
+              Continue
+            </el-button>
+            <el-button v-if="currentStep === 2" type="primary" @click="submitForm" :loading="loading" size="large">
+              Create Account
+            </el-button>
+          </div>
+        </el-form>
 
-      <div class="login-link">
-        Already have an account? <router-link to="/login">Login</router-link>
+        <div class="auth-footer">
+          <p>Already have an account? <router-link to="/login">Sign in</router-link></p>
+        </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -97,7 +108,6 @@ const form = reactive({
   email: '',
   username: '',
   password: '',
-  full_name: '',
   plan: 'basic',
   company_name: '',
   subdomain: ''
@@ -112,24 +122,9 @@ const rules = {
 }
 
 const plans = [
-  {
-    id: 'basic',
-    name: 'Starter',
-    price: '₦15,000',
-    features: ['2 GB RAM', '1 CPU Core', '10 GB Storage', 'Daily Backups', 'Email Support']
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price: '₦45,000',
-    features: ['4 GB RAM', '2 CPU Cores', '25 GB Storage', 'Hourly Backups', 'Redis Cache', 'Priority Support']
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: '₦120,000',
-    features: ['8 GB RAM', '4 CPU Cores', '100 GB Storage', 'Hourly Backups', 'Redis Cache', '24/7 Support', 'Custom Domain']
-  }
+  { id: 'basic', name: 'Starter', price: '15,000' },
+  { id: 'business', name: 'Business', price: '45,000' },
+  { id: 'enterprise', name: 'Enterprise', price: '120,000' }
 ]
 
 const nextStep = async () => {
@@ -137,11 +132,6 @@ const nextStep = async () => {
     const fields = ['email', 'username', 'password']
     const valid = await formRef.value.validateField(fields).catch(() => false)
     if (!valid) return
-  } else if (currentStep.value === 1) {
-    if (!form.plan) {
-      ElMessage.warning('Please select a plan')
-      return
-    }
   }
   currentStep.value++
 }
@@ -155,12 +145,7 @@ const submitForm = async () => {
     await api.post('/auth/register', {
       email: form.email,
       username: form.username,
-      password: form.password,
-      full_name: form.full_name
-    })
-    
-    await api.post('/auth/login', null, {
-      params: { username: form.username, password: form.password }
+      password: form.password
     })
     
     const loginForm = new FormData()
@@ -176,7 +161,7 @@ const submitForm = async () => {
       plan: form.plan
     })
     
-    ElMessage.success('Account created and Odoo instance deployed!')
+    ElMessage.success('Account created successfully!')
     router.push('/')
   } catch (error) {
     ElMessage.error(error.response?.data?.detail || 'Registration failed')
@@ -187,105 +172,159 @@ const submitForm = async () => {
 </script>
 
 <style scoped>
-.signup-container {
+.auth-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  padding: 40px 20px;
 }
 
-.signup-card {
-  width: 600px;
-  max-width: 100%;
+.auth-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
-.signup-header {
+.bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6366F1 100%);
+}
+
+.bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.auth-header {
   text-align: center;
+  margin-bottom: 32px;
 }
 
-.signup-header h1 {
-  color: #00d9ff;
-  margin: 0;
+.logo {
+  display: inline-flex;
+  margin-bottom: 20px;
 }
 
-.signup-header p {
-  color: #909399;
-  margin: 5px 0 0;
-}
-
-.plan-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.plan-card {
-  border: 2px solid #dcdfe6;
-  border-radius: 8px;
-  padding: 15px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.plan-card:hover {
-  border-color: #409eff;
-}
-
-.plan-card.selected {
-  border-color: #00d9ff;
-  background: #f0f9ff;
-}
-
-.plan-header {
-  text-align: center;
-}
-
-.plan-header h3 {
-  margin: 0;
-  color: #303133;
-}
-
-.price {
+.auth-header h1 {
   font-size: 1.5rem;
-  color: #00d9ff;
-  font-weight: bold;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
 }
 
-.price small {
-  font-size: 0.8rem;
-  color: #909399;
+.auth-header p {
+  color: #6B7280;
+  font-size: 0.9rem;
 }
 
-.plan-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0 0;
+.steps {
+  margin-bottom: 32px;
 }
 
-.plan-card li {
-  font-size: 0.8rem;
-  color: #606266;
-  padding: 3px 0;
+.step-content {
+  min-height: 200px;
+}
+
+.plan-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 2px solid #E5E7EB;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.plan-option:hover {
+  border-color: #6366F1;
+}
+
+.plan-option.selected {
+  border-color: #6366F1;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.plan-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366F1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.plan-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.plan-price {
+  font-size: 0.875rem;
+  color: #6366F1;
 }
 
 .form-actions {
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.login-link {
+.form-actions .el-button {
+  flex: 1;
+  height: 44px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.auth-footer {
   text-align: center;
-  margin-top: 20px;
-  color: #909399;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #E5E7EB;
 }
 
-.login-link a {
-  color: #00d9ff;
+.auth-footer p {
+  color: #6B7280;
+  font-size: 0.875rem;
+}
+
+.auth-footer a {
+  color: #6366F1;
+  font-weight: 600;
   text-decoration: none;
 }
 </style>
