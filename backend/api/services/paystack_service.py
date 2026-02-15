@@ -1,8 +1,8 @@
 import requests
 import hashlib
 import hmac
-from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
+from typing import Dict, Any
+from datetime import datetime
 from backend.core.config import get_settings
 
 settings = get_settings()

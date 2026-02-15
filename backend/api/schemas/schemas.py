@@ -60,7 +60,7 @@ class ClientResponse(ClientBase):
             import json
             try:
                 return json.loads(v)
-            except:
+            except Exception:
                 return []
         return []
 

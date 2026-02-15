@@ -1,6 +1,5 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from datetime import datetime
 from backend.core.config import get_settings
@@ -108,7 +107,7 @@ async def paystack_webhook(request: Request):
                 logger.info(f"Subscription created: {data.get('data', {}).get('subscription_code')}")
             
             elif event == "subscription.disable":
-                logger.info(f"Subscription disabled")
+                logger.info("Subscription disabled")
             
             return {"status": "success"}
         

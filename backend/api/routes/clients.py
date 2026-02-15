@@ -262,7 +262,6 @@ def create_client(
     db_password = client_data.db_password or generate_secure_password()
     plan_resources = get_plan_resources(client_data.plan)
     
-    from datetime import timedelta
     payment_deadline = datetime.utcnow() + timedelta(hours=24)
     
     client = Client(
@@ -518,7 +517,6 @@ def schedule_delete(
             detail="Client has already been deleted"
         )
     
-    from datetime import timedelta
     deletion_time = datetime.utcnow() + timedelta(hours=hours_until_deletion)
     
     client.status = ClientStatus.SCHEDULED_FOR_DELETION.value
@@ -792,7 +790,7 @@ def add_custom_domain(
         reload_nginx()
         request_ssl_certificate(domain, settings.SMTP_FROM)
         reload_nginx()
-    except Exception as e:
+    except Exception:
         pass
     
     log_activity(db, current_user.id, client.id, "domain_add", f"Added custom domain: {domain}")
@@ -934,7 +932,6 @@ def cleanup_expired_clients(
         except Exception:
             pass
         
-        import os
         nginx_config = f"/etc/nginx/sites-available/{client.name}.conf"
         nginx_enabled = f"/etc/nginx/sites-enabled/{client.name}.conf"
         for path in [nginx_config, nginx_enabled]:

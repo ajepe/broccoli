@@ -4,12 +4,11 @@ import string
 import subprocess
 import json
 import logging
-from typing import Optional
-from datetime import datetime
+
 from jinja2 import Template
 
 from backend.core.config import get_settings
-from backend.api.models.models import Client, ClientStatus
+from backend.api.models.models import Client
 
 settings = get_settings()
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ try:
 except ImportError:
     BOTO3_AVAILABLE = False
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from backend.core.config import get_settings
 from backend.api.models.models import Backup
 from backend.api.schemas.schemas import BackupResponse
@@ -75,7 +75,7 @@ def trigger_backup(client_name: str, backup_type: str = "manual", db: Session = 
             logger.error(f"Failed to copy backup: {copy_result.stderr}")
             return {"success": False, "message": f"Copy failed: {copy_result.stderr}"}
         
-        cleanup_dump = subprocess.run(
+        subprocess.run(
             [
                 "docker", "exec", f"db_{client_name}", "rm", f"/var/lib/postgresql/data/{filename}"
             ],
@@ -141,7 +141,7 @@ def restore_backup(client_name: str, backup_filename: str, db: Session) -> dict:
             local_path
         )
         
-        restore_result = subprocess.run(
+        subprocess.run(
             [
                 "docker", "exec", f"db_{client_name}",
                 "psql", "-U", f"odoo_{client_name.replace('-', '_')}",
@@ -161,7 +161,7 @@ def restore_backup(client_name: str, backup_filename: str, db: Session) -> dict:
             text=True
         )
         
-        restore_result = subprocess.run(
+        subprocess.run(
             [
                 "docker", "exec", "-i", f"db_{client_name}",
                 "pg_restore", "-U", f"odoo_{client_name.replace('-', '_')}",
