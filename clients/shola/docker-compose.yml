@@ -5,12 +5,10 @@ services:
     image: odoo:17.0
     container_name: odoo_${CLIENT_NAME}
     restart: unless-stopped
-    {% if redis_enabled %}
+    
     depends_on:
       - redis
-    {% else %}
-    depends_on: []
-    {% endif %}
+    
     ports:
       - "${ODOO_PORT}:8069"
     environment:
@@ -19,11 +17,11 @@ services:
       - USER=${DB_USER}
       - PASSWORD=${DB_PASSWORD}
       - DATABASE=${DB_NAME}
-      {% if redis_enabled %}
+      
       - CACHE__REDIS__URL=redis://redis:6379/0
       - CACHE__SESSION__REDIS__URL=redis://redis:6379/1
       - CACHE__DEFAULT__REDIS__DB=0
-      {% endif %}
+      
     volumes:
       - odoo_data:/var/lib/odoo
       - odoo_addons:/mnt/extra-addons
@@ -46,7 +44,7 @@ services:
       - "traefik.http.services.${CLIENT_NAME}.loadbalancer.server.port=8069"
       - "traefik.docker.network=${CLIENT_NAME}_network"
 
-  {% if redis_enabled %}
+  
   redis:
     image: redis:7-alpine
     container_name: redis_${CLIENT_NAME}
@@ -60,7 +58,7 @@ services:
     labels:
       - "com.odoo-cloud.client=${CLIENT_NAME}"
       - "com.odoo-cloud.type=cache"
-  {% endif %}
+  
 
 networks:
   ${CLIENT_NAME}_network:
@@ -70,7 +68,7 @@ networks:
 volumes:
   odoo_data:
     name: odoo_${CLIENT_NAME}_data
-  {% if redis_enabled %}
+  
   redis_data:
     name: redis_${CLIENT_NAME}_data
-  {% endif %}
+  

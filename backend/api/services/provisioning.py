@@ -3,6 +3,7 @@ import secrets
 import string
 import subprocess
 import json
+import logging
 from typing import Optional
 from datetime import datetime
 from jinja2 import Template
@@ -11,6 +12,7 @@ from backend.core.config import get_settings
 from backend.api.models.models import Client, ClientStatus
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def generate_secure_password(length: int = 20) -> str:
@@ -30,6 +32,89 @@ def generate_db_name(client_name: str) -> str:
 
 def generate_db_user(client_name: str) -> str:
     return f"odoo_{client_name.replace('-', '_')}"
+
+
+def create_external_database(db_name: str, db_user: str, db_password: str) -> bool:
+    try:
+        import psycopg2
+        from psycopg2 import sql
+    except ImportError:
+        logger.warning("psycopg2 not installed, skipping database creation")
+        return False
+    
+    try:
+        conn = psycopg2.connect(
+            host=settings.EXTERNAL_DB_HOST,
+            port=settings.EXTERNAL_DB_PORT,
+            user=settings.EXTERNAL_DB_USER,
+            password=settings.EXTERNAL_DB_PASSWORD,
+            database=settings.EXTERNAL_DB_NAME
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
+        
+        cursor.execute(sql.SQL("CREATE USER {} WITH PASSWORD %s").format(
+            sql.Identifier(db_user)
+        ), [db_password])
+        
+        cursor.execute(sql.SQL("CREATE DATABASE {} OWNER {}").format(
+            sql.Identifier(db_name),
+            sql.Identifier(db_user)
+        ))
+        
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"Created database {db_name} and user {db_user} on external PostgreSQL")
+        return True
+        
+    except psycopg2.errors.DuplicateDatabase:
+        logger.info(f"Database {db_name} already exists")
+        return True
+    except psycopg2.errors.DuplicateObject:
+        logger.info(f"User {db_user} already exists")
+        return True
+    except Exception as e:
+        logger.error(f"Error creating database: {e}")
+        return False
+
+
+def delete_external_database(db_name: str, db_user: str) -> bool:
+    try:
+        import psycopg2
+        from psycopg2 import sql
+    except ImportError:
+        logger.warning("psycopg2 not installed, skipping database deletion")
+        return False
+    
+    try:
+        conn = psycopg2.connect(
+            host=settings.EXTERNAL_DB_HOST,
+            port=settings.EXTERNAL_DB_PORT,
+            user=settings.EXTERNAL_DB_USER,
+            password=settings.EXTERNAL_DB_PASSWORD,
+            database=settings.EXTERNAL_DB_NAME
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
+        
+        cursor.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(
+            sql.Identifier(db_name)
+        ))
+        
+        cursor.execute(sql.SQL("DROP USER IF EXISTS {}").format(
+            sql.Identifier(db_user)
+        ))
+        
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"Deleted database {db_name} and user {db_user} from external PostgreSQL")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error deleting database: {e}")
+        return False
 
 
 def get_next_odoo_port() -> int:
@@ -107,13 +192,15 @@ def create_docker_compose(client: Client, db_password: str) -> None:
         "DB_NAME": client.db_name,
         "DB_USER": client.db_user,
         "DB_PASSWORD": db_password,
+        "DB_HOST": settings.EXTERNAL_DB_HOST,
+        "DB_PORT": settings.EXTERNAL_DB_PORT,
         "ODOO_PORT": client.odoo_port,
         "MEMORY_LIMIT": client.memory_limit,
         "DB_MEMORY_LIMIT": client.db_memory_limit,
         "CPU_LIMIT": client.cpu_limit,
         "DB_CPU_LIMIT": client.db_cpu_limit,
         "redis_enabled": client.redis_enabled,
-        "REDIS_MEMORY": "256m" if client.redis_enabled else None,
+        "REDIS_MEMORY": "512m" if client.redis_enabled else None,
         "PLAN": client.plan,
     }
     
@@ -136,6 +223,10 @@ DB_MEMORY_LIMIT={client.db_memory_limit}
 CPU_LIMIT={client.cpu_limit}
 DB_CPU_LIMIT={client.db_cpu_limit}
 PLAN={client.plan}
+
+# External PostgreSQL (shared across all clients)
+DB_HOST={settings.EXTERNAL_DB_HOST}
+DB_PORT={settings.EXTERNAL_DB_PORT}
 
 S3_BUCKET={settings.S3_BUCKET}
 S3_PREFIX={settings.S3_PREFIX}
@@ -193,10 +284,10 @@ def start_client_stack(client_name: str) -> bool:
         )
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Failed to start Docker Compose: {e.stderr.decode()}")
+        logger.error(f"Failed to start Docker Compose: {e.stderr.decode()}")
         return False
     except Exception as e:
-        print(f"Error starting client stack: {e}")
+        logger.error(f"Error starting client stack: {e}")
         return False
 
 
@@ -213,7 +304,7 @@ def stop_client_stack(client_name: str) -> bool:
         )
         return True
     except Exception as e:
-        print(f"Error stopping client stack: {e}")
+        logger.error(f"Error stopping client stack: {e}")
         return False
 
 
@@ -235,7 +326,7 @@ def remove_client_stack(client_name: str) -> bool:
         
         return True
     except Exception as e:
-        print(f"Error removing client stack: {e}")
+        logger.error(f"Error removing client stack: {e}")
         return False
 
 
@@ -253,7 +344,7 @@ def reload_nginx() -> bool:
         )
         return True
     except Exception as e:
-        print(f"Error reloading nginx: {e}")
+        logger.error(f"Error reloading nginx: {e}")
         return False
 
 
@@ -296,7 +387,7 @@ def get_container_stats(client_name: str) -> list:
         
         return stats
     except Exception as e:
-        print(f"Error getting container stats: {e}")
+        logger.error(f"Error getting container stats: {e}")
         return []
 
 
@@ -334,5 +425,5 @@ def request_ssl_certificate(domain: str, email: str) -> bool:
         
         return result.returncode == 0
     except Exception as e:
-        print(f"Error requesting SSL certificate: {e}")
+        logger.error(f"Error requesting SSL certificate: {e}")
         return False

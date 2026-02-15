@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import uuid
 
 from backend.core.database import get_db
+from backend.core.config import get_settings
 from backend.api.models.models import User, Client
 from backend.api.models.payment_models import Payment, Subscription
 from backend.api.services.paystack_service import (
@@ -15,10 +16,22 @@ from backend.api.routes.clients import get_current_user
 
 router = APIRouter()
 
+settings = get_settings()
+
 
 class PaymentInitializeRequest(BaseModel):
     plan: str
     billing_cycle: str = "monthly"
+    client_name: Optional[str] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "plan": "business",
+                "billing_cycle": "monthly",
+                "client_name": "mycompany"
+            }
+        }
 
 
 class PaymentInitializeResponse(BaseModel):
@@ -51,17 +64,31 @@ def initialize_payment(
             detail="Invalid plan selected"
         )
     
+    client_id = None
+    if request.client_name:
+        client = db.query(Client).filter(Client.name == request.client_name).first()
+        if client:
+            client_id = client.id
+    
     amount = get_plan_price(request.plan, request.billing_cycle)
     reference = f"ODOO-{uuid.uuid4().hex[:12].upper()}"
     
+    if client_id:
+        client = db.query(Client).filter(Client.id == client_id).first()
+        if client:
+            client.payment_reference = reference
+            db.commit()
+    
     paystack = get_paystack_service()
     
-    callback_url = f"{'http://localhost:5173'}/payment/callback?reference={reference}"
+    callback_url = f"{settings.FRONTEND_URL}/payment/callback?reference={reference}"
     
     metadata = {
         "user_id": current_user.id,
+        "client_id": client_id,
         "plan": request.plan,
         "billing_cycle": request.billing_cycle,
+        "client_name": request.client_name,
         "custom_fields": [
             {
                 "display_name": "Plan",
@@ -93,6 +120,7 @@ def initialize_payment(
         
         payment = Payment(
             user_id=current_user.id,
+            client_id=client_id,
             amount=amount,
             plan=request.plan,
             billing_cycle=request.billing_cycle,
@@ -200,13 +228,6 @@ def get_subscription(
         "next_billing_date": subscription.next_billing_date,
         "auto_renew": subscription.auto_renew
     }
-
-
-@router.post("/webhook")
-def paystack_webhook(
-    db: Session = Depends(get_db)
-):
-    pass
 
 
 @router.post("/cancel-subscription")

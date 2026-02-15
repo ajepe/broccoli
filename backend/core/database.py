@@ -2,18 +2,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from backend.core.config import get_settings
-import os
 
 settings = get_settings()
 
-# Use SQLite for local development, PostgreSQL for production
-if os.environ.get("USE_SQLITE", "true").lower() == "true":
+# Use SQLite for local development (default), PostgreSQL for production
+if settings.USE_SQLITE:
     DATABASE_URL = "sqlite:///./odoo_cloud.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
     DATABASE_URL = (
-        f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-        f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+        f"postgresql://{settings.EXTERNAL_DB_USER}:{settings.EXTERNAL_DB_PASSWORD}"
+        f"@{settings.EXTERNAL_DB_HOST}:{settings.EXTERNAL_DB_PORT}/{settings.EXTERNAL_DB_NAME}"
     )
     engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10)
 

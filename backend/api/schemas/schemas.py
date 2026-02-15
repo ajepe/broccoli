@@ -1,18 +1,19 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from typing import Optional, List
 from datetime import datetime
+import re
 
 
 class ClientBase(BaseModel):
     name: str = Field(..., min_length=3, max_length=100)
     domain: str = Field(..., pattern=r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z]{2,})+$')
     email: EmailStr
-    plan: str = "basic"
+    plan: str = Field(default="basic", pattern=r'^(basic|business|enterprise)$')
 
 
 class ClientCreate(ClientBase):
     db_password: Optional[str] = None
-    redis_enabled: bool = False
+    redis_enabled: bool = True
 
 
 class ClientUpdate(BaseModel):
@@ -40,23 +41,28 @@ class ClientResponse(ClientBase):
     last_backup: Optional[datetime] = None
     created_at: datetime
     activated_at: Optional[datetime] = None
-    custom_domains: Optional[List[str]] = []
+    custom_domains: Optional[List[str]] = Field(default_factory=lambda: [])
+    payment_deadline: Optional[datetime] = None
+    payment_reference: Optional[str] = None
+    payment_status: Optional[str] = "pending"
+    deletion_scheduled_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
+    @field_validator('custom_domains', mode='before')
     @classmethod
-    def from_orm(cls, obj):
-        data = {k: getattr(obj, k, None) for k in obj.__table__.columns.keys()}
-        if data.get('custom_domains'):
+    def parse_custom_domains(cls, v):
+        if v is None or v == '':
+            return []
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
             import json
             try:
-                data['custom_domains'] = json.loads(data['custom_domains'])
+                return json.loads(v)
             except:
-                data['custom_domains'] = []
-        else:
-            data['custom_domains'] = []
-        return cls(**data)
+                return []
+        return []
 
 
 class ClientDetailResponse(ClientResponse):
@@ -84,7 +90,20 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=8, max_length=100)
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('Password must contain at least one number')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError('Password must contain at least one special character')
+        return v
 
 
 class UserResponse(UserBase):
@@ -99,7 +118,8 @@ class UserResponse(UserBase):
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    refresh_token: Optional[str] = None
+    token_type: str = "bearer"
 
 
 class TokenData(BaseModel):

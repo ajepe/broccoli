@@ -154,15 +154,29 @@ const submitForm = async () => {
     const loginRes = await api.post('/auth/login', loginForm)
     localStorage.setItem('access_token', loginRes.data.access_token)
     
+    const clientName = form.subdomain.toLowerCase().replace(/\s+/g, '-')
+    
     await api.post('/clients', {
-      name: form.subdomain.toLowerCase().replace(/\s+/g, '-'),
-      domain: `${form.subdomain.toLowerCase()}.yourdomain.com`,
+      name: clientName,
+      domain: `${clientName}.yourdomain.com`,
       email: form.email,
       plan: form.plan
     })
     
-    ElMessage.success('Account created successfully!')
-    router.push('/')
+    const paymentRes = await api.post('/payments/initialize', {
+      plan: form.plan,
+      billing_cycle: 'monthly'
+    })
+    
+    ElMessage.success('Account created! Please complete payment to activate your instance.')
+    router.push({ 
+      path: '/payment', 
+      query: { 
+        plan: form.plan, 
+        reference: paymentRes.data.reference,
+        client: clientName
+      } 
+    })
   } catch (error) {
     ElMessage.error(error.response?.data?.detail || 'Registration failed')
   } finally {

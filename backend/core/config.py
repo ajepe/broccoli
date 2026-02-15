@@ -7,14 +7,23 @@ import os
 class Settings(BaseSettings):
     APP_NAME: str = "Odoo Cloud Platform"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     USE_SQLITE: bool = True
     
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "odoo_cloud"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "odoo_cloud_platform"
+    # Platform domain (e.g., lvh.me, cloud.yourdomain.com)
+    BASE_DOMAIN: str = "lvh.me"
+    
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    
+    # Platform database (SQLite for control panel)
+    DATABASE_URL: str = "sqlite:///./odoo_cloud.db"
+    
+    # External PostgreSQL for client databases (separate VPS)
+    EXTERNAL_DB_HOST: str = "10.0.0.20"
+    EXTERNAL_DB_PORT: int = 5432
+    EXTERNAL_DB_USER: str = "odoo_clients"
+    EXTERNAL_DB_PASSWORD: str = "change_me_strong_password"
+    EXTERNAL_DB_NAME: str = "template1"
     
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -25,10 +34,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     DOCKER_SOCKET_PATH: str = "/var/run/docker.sock"
-    ODOO_DATA_DIR: str = "/home/babatope/Documents/projects/saas/clients"
-    NGINX_CONFIG_DIR: str = "/home/babatope/Documents/projects/saas/nginx/sites-available"
-    NGINX_ENABLED_DIR: str = "/home/babatope/Documents/projects/saas/nginx/sites-enabled"
-    BACKUP_DIR: str = "/home/babatope/Documents/projects/saas/backups"
+    ODOO_DATA_DIR: str = os.getenv("ODOO_DATA_DIR", "/home/babatope/Documents/projects/saas/clients")
+    NGINX_CONFIG_DIR: str = os.getenv("NGINX_CONFIG_DIR", "/etc/nginx/sites-available")
+    NGINX_ENABLED_DIR: str = os.getenv("NGINX_ENABLED_DIR", "/etc/nginx/sites-enabled")
+    BACKUP_DIR: str = os.getenv("BACKUP_DIR", "/home/babatope/Documents/projects/saas/backups")
     
     S3_ENDPOINT: str = "https://s3.amazonaws.com"
     S3_BUCKET: str = "odoo-backups"
@@ -66,7 +75,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     
     class Config:
-        env_file = "/home/babatope/Documents/projects/saas/backend/.env"
+        env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
         case_sensitive = True
         extra = "ignore"
 

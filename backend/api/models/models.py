@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, Enum, Index
 from sqlalchemy.sql import func
 from backend.core.database import Base
 import enum
@@ -9,6 +9,7 @@ class ClientStatus(str, enum.Enum):
     SUSPENDED = "suspended"
     PENDING = "pending"
     DELETED = "deleted"
+    SCHEDULED_FOR_DELETION = "scheduled_for_deletion"
 
 
 class PlanType(str, enum.Enum):
@@ -19,6 +20,11 @@ class PlanType(str, enum.Enum):
 
 class Client(Base):
     __tablename__ = "clients"
+    __table_args__ = (
+        Index('idx_client_status', 'status'),
+        Index('idx_client_email', 'email'),
+        Index('idx_client_plan', 'plan'),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, index=True, nullable=False)
@@ -31,14 +37,14 @@ class Client(Base):
     
     odoo_port = Column(Integer, nullable=False)
     
-    status = Column(String(50), default=ClientStatus.PENDING.value)
-    plan = Column(String(50), default=PlanType.BASIC.value)
+    status = Column(String(50), default=ClientStatus.PENDING.value, index=True)
+    plan = Column(String(50), default=PlanType.BASIC.value, index=True)
     
     memory_limit = Column(String(50), default="2g")
     db_memory_limit = Column(String(50), default="1g")
     cpu_limit = Column(Float, default=1.0)
     db_cpu_limit = Column(Float, default=0.5)
-    redis_enabled = Column(Boolean, default=False)
+    redis_enabled = Column(Boolean, default=True)
     
     disk_usage_mb = Column(Integer, default=0)
     last_backup = Column(DateTime, nullable=True)
@@ -55,6 +61,10 @@ class Client(Base):
     
     notes = Column(Text, nullable=True)
     custom_domains = Column(Text, default="[]")
+    payment_deadline = Column(DateTime, nullable=True)
+    payment_reference = Column(String(255), nullable=True)
+    payment_status = Column(String(50), default="pending")
+    deletion_scheduled_at = Column(DateTime, nullable=True)
 
 
 class User(Base):

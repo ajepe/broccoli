@@ -128,16 +128,16 @@ const resumeClient = async (client) => {
 const deleteClient = async (client) => {
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete ${client.name}? This action cannot be undone.`,
-      'Confirm Delete',
-      { type: 'error', confirmButtonText: 'Delete', cancelButtonText: 'Cancel' }
+      `Are you sure you want to delete ${client.name}? The instance will be scheduled for deletion in 12 hours and can be restored by an admin before then.`,
+      'Schedule Client Deletion',
+      { type: 'warning', confirmButtonText: 'Schedule Delete', cancelButtonText: 'Cancel' }
     )
-    await api.delete(`/clients/${client.name}`)
-    ElMessage.success('Client deleted')
+    await api.post(`/clients/${client.name}/schedule-delete?hours_until_deletion=12`)
+    ElMessage.success(`Client "${client.name}" scheduled for deletion in 12 hours`)
     fetchClients()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('Failed to delete client')
+      ElMessage.error(error.response?.data?.detail || 'Failed to schedule deletion')
     }
   }
 }
